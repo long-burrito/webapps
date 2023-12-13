@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Updated Web Page</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Montserrat:wght@500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #ff6b6b; /* Warm red */
+            --secondary-color: #fcd661; /* Yellow */
+            --background-color: #f5f5f5; /* Light grey */
+            --text-color: #404040;
+            --link-color: #48a9a6; /* Teal */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.7;
+        }
+
+        .header {
+            font-family: 'Montserrat', sans-serif;
+            background: var(--primary-color);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .header img {
+            height: 50px;
+            width: 50px;
+            border-radius: 50%;
+            margin-right: 15px;
+        }
+
+        .header a {
+            color: #fff;
+            text-decoration: none;
+            margin-left: 20px;
+            font-weight: 700;
+            transition: color 0.3s;
+        }
+
+        .header a:hover {
+            color: var(--secondary-color);
+        }
+
+        .content {
+            padding: 30px;
+            max-width: 900px;
+            margin: auto;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            margin-bottom: 25px;
+            color: var(--primary-color);
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        input[type=text], button {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+
+        input[type=text] {
+            width: calc(100% - 24px);
+            margin: 10px 0;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        button:focus {
+            outline: none;
+        }
+
+        @media (max-width: 600px) {
+            .header, .content {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        .section-divider {
+            margin: 30px 0;
+            border-bottom: 3px solid var(--primary-color);
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        {% if "given_name" in session %}
+            <div>
+                <span>{{ session['name'] }}</span>
+                <a href="/final/logout">Logout</a>
+				<a href="/final/tickers">Tickers</a>
+            </div>
+            <img src="{{ session['picture'] }}" alt="{{ session['name'] }}" />
+        {% else %}
+            <a href="/final/login">Login</a>
+			<a href="/final/tickers">Tickers</a>
+        {% endif %}
+    </div>
+
+    <!-- Main Content -->
+    {% block content %}
+        <div class="content">
+            {% if "given_name" in session %}
+                <div>
+                    <h2>User Profile</h2>
+                    <h1>Welcome, {{ session['name'] }}!</h1>
+                    <h2>Money: $<span id="money"></span></h2>
+
+                    <div class="section-divider"></div>
+                    <h3>Buy Shares</h3>
+                    <p>Stock Price: $<span id="stockPrice"></span></p>
+                    <input type="text" id="priceTextBox" placeholder="Enter ticker">
+                    <button id="checkPriceButton" onclick="updatePrice()">Check price</button>
+
+                    <!-- Elements for purchasing shares -->
+                    <div id="purchaseSection" style="display:none;">
+                        <p>How many shares do you want to buy?</p>
+                        <input type="number" id="shareAmount" placeholder="Number of shares">
+                        <button onclick="purchaseShares()">Next</button>
+                    </div>
+
+					<div class="section-divider"></div>
+
+					<div id="purchaseSummary" style="display:none;">
+						<h3>Purchase Summary</h3>
+						<p id="summaryText"></p>
+						<button id="confirmPurchaseButton" onclick="confirmPurchase()">Purchase</button>
+						<p id="purchaseError" style="color: red; display: none;">Not enough funds to complete this transaction.</p>
+					</div>
+					
+					<div class="section-divider"></div>
+
+					<div id="sellSection">
+						<h3>Sell Shares</h3>
+						<input type="text" id="sellTicker" placeholder="Enter ticker">
+						<input type="number" id="sellShareAmount" placeholder="Number of shares">
+						<button onclick="calculateSale()">Calculate Potential Revenue</button>
+						<p>Potential Revenue: $<span id="potentialRevenue"></span></p>
+						<button onclick="sellShares()">Sell</button>
+					</div>
+					
+                </div>
+            </div>
+            {% else %}
+                <h1>Welcome to my page! Please log in!</h1>
+            {% endif %}
+        </div>
+    {% endblock content %}
+
+	<!-- Ticker List Section -->
+	<div class="content">
+		{% if "given_name" in session %}
+			<!-- Other content ... -->
+			<div class="section-divider"></div>
+			<div id="ownedTickers">
+				<h2>Owned Tickers</h2>
+				<ul id="tickerList">
+					<!-- Ticker items will be added here dynamically -->
+				</ul>
+			</div>
+			<!-- Other content ... -->
+		{% endif %}
+	</div>
+
+<script>
+var userMoney = 0; 
+
+$(document).ready(function() {
+	$.getJSON('/api/user/{{ user_id }}', function(data) {
+		$('#money').text(numberWithCommas(data.money.toFixed(2)));
+		$('#ticks').text(data.ticks);
+		userMoney = data.money;
+		loadOwnedTickers();
+	}).fail(function() {
+		console.log("Error fetching data");
+	});
+});
+function sellShares() {
+    var ticker = document.getElementById('sellTicker').value;
+    var numberOfShares = parseInt(document.getElementById('sellShareAmount').value);
+    var money = parseFloat(document.getElementById('potentialRevenue').textContent); 
+    var userid = '{{ user_id }}';
+    
+    if (ticker && numberOfShares > 0) {
+        $.ajax({
+            url: '/final/sell',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ 
+                ticker: ticker, 
+                shares: numberOfShares,
+                user_id: userid,
+                money: money
+            }),
+            success: function(response) {
+                console.log("Shares sold successfully");
+                alert("Shares sold successfully."); // Notify user of success
+                userMoney += money;
+                $('#money').text(numberWithCommas(userMoney.toFixed(2)));
+                loadOwnedTickers();
+            },
+            error: function(xhr, status, error) {
+                console.log("Error selling shares:", error);
+                if (xhr.status === 400) {
+                    // Handle the specific case where the user doesn't have enough shares
+                    alert("Error: " + xhr.responseJSON.message); // Display the error message from server
+                } else {
+                    alert("An error occurred while processing your request.");
+                }
+                // Additional error handling code can go here
+            }
+        });
+    } else {
+        alert('Please enter a valid ticker, number of shares, and ensure stock price is available');
+    }
+}
+
+function numberWithCommas(x) {
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+
+function calculateSale() {
+    var ticker = document.getElementById('sellTicker').value;
+    var numberOfShares = parseInt(document.getElementById('sellShareAmount').value);
+	
+    if (ticker && numberOfShares > 0) {
+        $.getJSON(`/final/get_stocks/${ticker}`, function(data) {
+            var currentPrice = data.currentPrice;
+            var potentialRevenue = currentPrice * numberOfShares;
+            $('#potentialRevenue').text(potentialRevenue.toFixed(2));
+        }).fail(function() {
+            console.log("Error fetching stock data");
+            $('#potentialRevenue').text("Stock not found!");
+        });
+    } else {
+        console.log('Please enter a valid ticker and number of shares');
+        $('#potentialRevenue').text("Invalid input!");
+    }
+}
+
+function loadOwnedTickers() {
+    $.getJSON('/api/user/{{ user_id }}', function(data) {
+        var tickerList = $('#tickerList');
+        tickerList.empty(); // Clear existing list items
+
+        for (var tickerSymbol in data.ticks) {
+            if (data.ticks.hasOwnProperty(tickerSymbol)) {
+                var quantity = data.ticks[tickerSymbol];
+				var wack = (`<li>${tickerSymbol} - ${quantity} shares</li>`).toUpperCase();
+                tickerList.append(wack)
+            }
+        }
+    }).fail(function() {
+        console.log("Error fetching ticker data");
+    });
+}
+function updatePrice() {
+            var ticker = document.getElementById('priceTextBox').value;
+
+            if (ticker) {
+                $.getJSON(`/final/get_stocks/${ticker}`, function(data) {
+                    $('#stockPrice').text(data.currentPrice);
+                    $('#purchaseSection').show(); // Show purchase section
+                }).fail(function() {
+                    console.log("Error fetching stock data");
+                    $('#stockPrice').text("Stock does not exist!");
+                    $('#purchaseSection').hide(); // Hide purchase section on error
+                });
+            } else {
+                console.log('No ticker entered');
+            }
+        }
+var originalPurchaseSummaryHTML = $('#purchaseSummary').html();
+function purchaseShares() {
+    var numberOfShares = document.getElementById('shareAmount').value;
+    var ticker = document.getElementById('priceTextBox').value;
+    var stockPrice = parseFloat(document.getElementById('stockPrice').textContent);
+	
+    if (numberOfShares && ticker && stockPrice) {
+		if (document.getElementById('summaryText') === null) {
+        console.error('Element with ID "summaryText" not found.');
+        return; // Exit the function if the element is not found
+    	}
+        var totalCost = numberOfShares * stockPrice;
+        var summary = `You are purchasing ${numberOfShares} shares of ${ticker} at a total cost of $${totalCost.toFixed(2)}.`;
+        document.getElementById('summaryText').textContent = summary;
+        document.getElementById('purchaseSummary').style.display = 'block';
+		
+        // Reset the purchase button to its initial state
+        document.getElementById('confirmPurchaseButton').style.backgroundColor = '';
+        document.getElementById('confirmPurchaseButton').textContent = 'Purchase';
+
+        if (userMoney >= totalCost) {
+            document.getElementById('confirmPurchaseButton').disabled = false;
+            document.getElementById('purchaseError').style.display = 'none';
+        } else {
+            document.getElementById('confirmPurchaseButton').style.backgroundColor = 'red';
+            document.getElementById('confirmPurchaseButton').disabled = true;
+            document.getElementById('purchaseError').style.display = 'block';
+        }
+    } else {
+        console.log('Please enter a valid number of shares');
+    }
+}
+
+function confirmPurchase() {
+    var numberOfShares = document.getElementById('shareAmount').value;
+    var ticker = document.getElementById('priceTextBox').value;
+    var stockPrice = parseFloat(document.getElementById('stockPrice').textContent);
+    var totalCost = numberOfShares * stockPrice;
+    var userid = '{{ user_id }}';
+
+    $.ajax({
+        url: '/final/purchase',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ 
+            ticker: ticker, 
+            shares: numberOfShares, 
+            totalCost: totalCost,
+            user_id: userid
+        }),
+        success: function(response) {
+            userMoney -= totalCost;
+            $('#money').text(numberWithCommas(userMoney.toFixed(2)));
+
+            var successMessage = `Successfully purchased ${numberOfShares} shares of ${ticker}.`;
+            $('#purchaseSummary').html(`<h3 style="color: green;">Purchase Successful</h3><p>${successMessage}</p>`);
+
+            // Reset the input field and hide the purchase section
+            $('#shareAmount').val('');
+            setTimeout(function() {
+                $('#purchaseSummary').hide();
+                $('#purchaseSummary').html(originalPurchaseSummaryHTML);
+                $('#purchaseSection').show();
+            }, 3000);
+			loadOwnedTickers();
+        },
+		
+        error: function(error) {
+            console.log(error);
+            $('#confirmPurchaseButton').css('background-color', 'red').text('Insufficient Funds');
+        }
+    });
+}
+
+    </script>
+
+
+<!-- TradingView Widget BEGIN 
+<div class="tradingview-widget-container" style="height:100%;width:100%">
+	<div id="tradingview_6f4f1" style="height:calc(100% - 32px);width:100%"></div>
+	<div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Track all markets on TradingView</span></a></div>
+	<script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+	<script type="text/javascript">
+	new TradingView.widget(
+	{
+	"autosize": true,
+	"symbol": "NASDAQ:AAPL",
+	"interval": "D",
+	"timezone": "Etc/UTC",
+	"theme": "light",
+	"style": "1",
+	"locale": "en",
+	"enable_publishing": false,
+	"allow_symbol_change": true,
+	"container_id": "tradingview_6f4f1"
+  }
+	);
+	</script>
+  </div>
+-->
+</body>
+
+</html>

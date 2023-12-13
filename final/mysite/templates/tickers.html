@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tickers</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Montserrat:wght@500&display=swap" rel="stylesheet">
+    <style>
+
+        .scrollable-table-container {
+            max-height: 600px;
+            width: 1000px;
+            overflow-y: auto;
+        }
+        /* Style can be adjusted based on your preference */
+        table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 10px;
+        }
+
+        th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        }
+
+        th {
+        background-color: #f2f2f2;
+        }
+        
+
+        :root {
+            --primary-color: #ff6b6b; /* Warm red */
+            --secondary-color: #fcd661; /* Yellow */
+            --background-color: #f5f5f5; /* Light grey */
+            --text-color: #404040;
+            --link-color: #48a9a6; /* Teal */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.7;
+        }
+
+        .header {
+            font-family: 'Montserrat', sans-serif;
+            background: var(--primary-color);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .header img {
+            height: 50px;
+            width: 50px;
+            border-radius: 50%;
+            margin-right: 15px;
+        }
+
+        .header a {
+            color: #fff;
+            text-decoration: none;
+            margin-left: 20px;
+            font-weight: 700;
+            transition: color 0.3s;
+        }
+
+        .header a:hover {
+            color: var(--secondary-color);
+        }
+
+        .content {
+            padding: 30px;
+            max-width: 900px;
+            margin: auto;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            margin-bottom: 25px;
+            color: var(--primary-color);
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        input[type=text], button {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+
+        input[type=text] {
+            width: calc(100% - 24px);
+            margin: 10px 0;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        button:focus {
+            outline: none;
+        }
+
+        @media (max-width: 600px) {
+            .header, .content {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        .section-divider {
+            margin: 30px 0;
+            border-bottom: 3px solid var(--primary-color);
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        {% if "given_name" in session %}
+            <div>
+                <span>{{ session['name'] }}</span>
+                <a href="/final/logout">Logout</a>
+                <a href="/final">Home</a>
+            </div>
+            <img src="{{ session['picture'] }}" alt="{{ session['name'] }}" />
+        {% else %}
+            <a href="/final/login">Login</a>
+            <a href="/final">Final</a>
+        {% endif %}
+    </div>
+
+    <!-- Main Content -->
+    {% block content %}
+        <div class="content">
+            {% if "given_name" in session %}
+                <div>
+                    <h1>Tickers</h1>
+                    <div class="section-divider"></div>
+                    <form action="/final/upload_csv" method="post" enctype="multipart/form-data">
+                        <input type="file" name="csvFile" accept=".csv">
+                        <input type="submit" value="Upload CSV">
+                    </form>
+                    <div class="section-divider"></div>
+					<div>
+						<h3>All NASDAQ And NYSE Tickers</h3>
+                        <div class="section-divider"></div>
+                        <table id="data-table">
+                            <thead>
+                                <tr id="table-header">
+                                    <!-- Table headers will be populated dynamically -->
+                                </tr>
+                            </thead>
+                            <tbody id="table-body">
+                                <!-- Table body will be populated dynamically -->
+                            </tbody>
+                        </table>
+					</div>
+                </div>
+            </div>
+            {% else %}
+                <h1>Welcome to my page! Please log in!</h1>
+            {% endif %}
+        </div>
+    {% endblock content %}
+    <script src="https://www.gstatic.com/firebasejs/9.6.5/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.5/firebase-firestore.js"></script>
+
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.5/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.5/firebase-firestore.js"></script>
+    <script>
+        const tableHeader = document.getElementById("table-header");
+        const tableBody = document.getElementById("table-body");
+
+        db.collection("your_collection_name").get().then((querySnapshot) => {
+            let headersSet = false;
+
+            querySnapshot.forEach((doc) => {
+                const rowData = doc.data();
+                const tableRow = document.createElement("tr");
+
+                if (!headersSet) {
+                    // Populate table headers
+                    for (const field in rowData) {
+                        const tableHeaderCell = document.createElement("th");
+                        tableHeaderCell.textContent = field;
+                        tableHeader.appendChild(tableHeaderCell);
+                    }
+                    headersSet = true;
+                }
+
+                // Populate table rows with document data
+                for (const field in rowData) {
+                    const tableCell = document.createElement("td");
+                    tableCell.textContent = rowData[field];
+                    tableRow.appendChild(tableCell);
+                }
+
+                tableBody.appendChild(tableRow);
+            });
+        }).catch((error) => {
+            console.log("Error getting documents: ", error);
+        });
+    </script>
+<script>
+// Fetch Firestore data and populate the table
+
+function updatePrice() {
+            var ticker = document.getElementById('priceTextBox').value;
+
+            if (ticker) {
+                $.getJSON(`/final/get_stocks/${ticker}`, function(data) {
+                    $('#stockPrice').text(data.currentPrice);
+                }).fail(function() {
+                    console.log("Error fetching stock data");
+                    $('#stockPrice').text("Error");
+                    $('#purchaseSection').hide(); // Hide purchase section on error
+                });
+            } else {
+                console.log('No ticker entered');
+            }
+        }
+    </script>
+
+
+  
+</body>
+
+</html>

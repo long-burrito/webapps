@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tickers</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Montserrat:wght@500&display=swap" rel="stylesheet">
+    <style>
+
+        .scrollable-table-container {
+            max-height: 600px;
+            width: 1000px;
+            overflow-y: auto;
+        }
+        /* Style can be adjusted based on your preference */
+        table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 10px;
+        }
+
+        th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        }
+
+        th {
+        background-color: #f2f2f2;
+        }
+
+
+        :root {
+            --primary-color: #ff6b6b; /* Warm red */
+            --secondary-color: #fcd661; /* Yellow */
+            --background-color: #f5f5f5; /* Light grey */
+            --text-color: #404040;
+            --link-color: #48a9a6; /* Teal */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.7;
+        }
+
+        .header {
+            font-family: 'Montserrat', sans-serif;
+            background: var(--primary-color);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .header img {
+            height: 50px;
+            width: 50px;
+            border-radius: 50%;
+            margin-right: 15px;
+        }
+
+        .header a {
+            color: #fff;
+            text-decoration: none;
+            margin-left: 20px;
+            font-weight: 700;
+            transition: color 0.3s;
+        }
+
+        .header a:hover {
+            color: var(--secondary-color);
+        }
+
+        .content {
+            padding: 30px;
+            max-width: 900px;
+            margin: auto;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            margin-bottom: 25px;
+            color: var(--primary-color);
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        input[type=text], button {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+
+        input[type=text] {
+            width: calc(100% - 24px);
+            margin: 10px 0;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        button:focus {
+            outline: none;
+        }
+
+        @media (max-width: 600px) {
+            .header, .content {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        .section-divider {
+            margin: 30px 0;
+            border-bottom: 3px solid var(--primary-color);
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        {% if "given_name" in session %}
+            <div>
+                <span>{{ session['name'] }}</span>
+                <a href="/final/logout">Logout</a>
+                <a href="/final">Home</a>
+            </div>
+            <img src="{{ session['picture'] }}" alt="{{ session['name'] }}" />
+        {% else %}
+            <a href="/final/login">Login</a>
+            <a href="/final">Final</a>
+        {% endif %}
+    </div>
+
+    <!-- Main Content -->
+    {% block content %}
+    <div class="content">
+        {% if "given_name" in session %}
+            <div>
+                <h1>Stocks I Own</h1>
+                <!-- Ticker List Section -->
+	<div class="content">
+		{% if "given_name" in session %}
+			<div id="ownedTickers">
+				<h2>Owned Tickers</h2>
+				<ul id="tickerList">
+					<!-- Ticker items will be added here dynamically -->
+				</ul>
+			</div>
+			<!-- Other content ... -->
+		{% endif %}
+	</div>
+
+                <!-- Sell Summary -->
+                <div id="sellSummary" style="display:none;">
+                    <h3>Sell Summary</h3>
+                    <p id="summarySellText"></p>
+                    <button id="confirmSellButton" onclick="confirmSell()">Confirm Sell</button>
+                    <p id="sellError" style="color: red; display: none;">Error message here.</p>
+                </div>
+            </div>
+        </div>
+        {% else %}
+            <h1>Welcome to my page! Please log in!</h1>
+        {% endif %}
+    </div>
+    {% endblock content %}
+    <script>
+function prepareSell(ticker) {
+    var sharesToSellInput = document.getElementById('sharesToSell-' + ticker);
+    var sharesToSell = sharesToSellInput.value;
+
+    if (sharesToSell <= sharesToSellInput.max) {
+        // Fetch current price and show summary
+        fetchCurrentPriceAndPrepareSummary(ticker, sharesToSell);
+    } else {
+        alert("Invalid number of shares entered.");
+    }
+}
+
+function fetchCurrentPriceAndPrepareSummary(ticker, sharesToSell) {
+    $.getJSON(`/final/get_stocks/${ticker}`, function(data) {
+        let currentPrice = data.currentPrice;
+        prepareSellSummary(ticker, sharesToSell, currentPrice);
+    }).fail(function() {
+        alert("Error fetching stock data for " + ticker);
+    });
+}
+
+function prepareSellSummary(ticker, sharesToSell, currentPrice) {
+    var totalIncome = sharesToSell * currentPrice;
+    var summary = `You are selling ${sharesToSell} shares of ${ticker} for a total of $${totalIncome.toFixed(2)}.`;
+    document.getElementById('summarySellText').textContent = summary;
+    document.getElementById('sellSummary').style.display = 'block';
+    // Store the sell details in a globally accessible variable or data attribute for use in confirmSell
+}
+function confirmSell() {
+    // Retrieve the sell details (ticker, sharesToSell, currentPrice)
+    // This data can be stored in a global variable or retrieved from a data attribute
+
+    $.ajax({
+        url: '/final/sell',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ 
+            ticker: ticker, 
+            shares: sharesToSell, 
+            sellingPrice: currentPrice,
+            user_id: userid // Make sure user_id is available
+        }),
+        success: function(response) {
+            alert(`Successfully sold ${sharesToSell} shares of ${ticker}.`);
+            // Update the user interface to reflect the new stock quantity and account balance
+        },
+        error: function(error) {
+            console.error("Error during selling:", error);
+            alert("Failed to sell shares.");
+        }
+    });
+}
+
+$(document).ready(function() {
+	$.getJSON('/api/user/{{ user_id }}', function(data) {
+		$('#money').text(data.money);
+		$('#ticks').text(data.ticks);
+		userMoney = data.money;
+		loadOwnedTickers();
+	}).fail(function() {
+		console.log("Error fetching data");
+	});
+});
+function loadOwnedTickers() {
+    $.getJSON('/api/user/{{ user_id }}', function(data) {
+        var tickerList = $('#tickerList');
+        tickerList.empty(); // Clear existing list items
+
+        for (var tickerSymbol in data.ticks) {
+            if (data.ticks.hasOwnProperty(tickerSymbol)) {
+                var quantity = data.ticks[tickerSymbol];
+                var wack = (`<li>${tickerSymbol} - ${quantity} shares</li>`).toUpperCase();
+                tickerList.append(wack)
+            }
+        }
+    }).fail(function() {
+        console.log("Error fetching ticker data");
+    });
+}
+
+
+    </script>
+  
+</body>
+
+</html>
